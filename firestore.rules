@@ -1,0 +1,154 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && (request.auth.token.email_verified == true || request.auth.token.firebase.sign_in_provider == 'google.com');
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email == 'zecannice@gmail.com' && request.auth.token.email_verified == true) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Asset validation
+    function isValidAsset(data) {
+      return data.assetTag is string && data.assetTag.size() > 0 && data.assetTag.size() <= 64 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 128 &&
+             data.category is string && data.category.size() > 0 && data.category.size() <= 64 &&
+             data.status in ['Active', 'In Use', 'Under Maintenance', 'In Storage', 'Decommissioned'] &&
+             data.condition in ['Excellent', 'Good', 'Fair', 'Critical'] &&
+             data.location is string && data.location.size() > 0 && data.location.size() <= 128 &&
+             (!('floorOrArea' in data) || (data.floorOrArea is string && data.floorOrArea.size() <= 64)) &&
+             (!('latitude' in data) || (data.latitude is number && data.latitude >= -90.0 && data.latitude <= 90.0)) &&
+             (!('longitude' in data) || (data.longitude is number && data.longitude >= -180.0 && data.longitude <= 180.0)) &&
+             (!('department' in data) || (data.department is string && data.department.size() <= 64)) &&
+             (!('assignedTo' in data) || (data.assignedTo is string && data.assignedTo.size() <= 100)) &&
+             (!('serialNumber' in data) || (data.serialNumber is string && data.serialNumber.size() <= 64)) &&
+             (!('previousSerialNumber' in data) || (data.previousSerialNumber is string && data.previousSerialNumber.size() <= 64)) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000)) &&
+             (!('operationalHours' in data) || (data.operationalHours is number && data.operationalHours >= 0)) &&
+             (!('temperature' in data) || (data.temperature is number)) &&
+             (!('batteryLevel' in data) || (data.batteryLevel is number && data.batteryLevel >= 0 && data.batteryLevel <= 100)) &&
+             (!('isOnline' in data) || (data.isOnline is bool)) &&
+             (!('starlinkCid' in data) || (data.starlinkCid is string && data.starlinkCid.size() <= 64)) &&
+             (!('starlinkKit' in data) || (data.starlinkKit is string && data.starlinkKit.size() <= 64)) &&
+             (!('previousStarlinkKit' in data) || (data.previousStarlinkKit is string && data.previousStarlinkKit.size() <= 64)) &&
+             (!('replacementReason' in data) || (data.replacementReason is string && data.replacementReason.size() <= 500)) &&
+             (!('lastReplacedAt' in data) || (data.lastReplacedAt is string && data.lastReplacedAt.size() <= 64)) &&
+             (!('replacementCount' in data) || (data.replacementCount is number && data.replacementCount >= 0)) &&
+             (!('starlinkServiceName' in data) || (data.starlinkServiceName is string && data.starlinkServiceName.size() <= 100)) &&
+             (!('downloadSpeed' in data) || (data.downloadSpeed is number)) &&
+             (!('uploadSpeed' in data) || (data.uploadSpeed is number)) &&
+             (!('latency' in data) || (data.latency is number)) &&
+             (!('obstructionPercent' in data) || (data.obstructionPercent is number)) &&
+             (!('cctvType' in data) || (data.cctvType is string && data.cctvType.size() <= 64)) &&
+             (!('ipAddress' in data) || (data.ipAddress is string && data.ipAddress.size() <= 64)) &&
+             (!('cctvUsername' in data) || (data.cctvUsername is string && data.cctvUsername.size() <= 64)) &&
+             (!('cctvPassword' in data) || (data.cctvPassword is string && data.cctvPassword.size() <= 100)) &&
+             (!('rtspPort' in data) || (data.rtspPort is number)) &&
+             (!('streamQuality' in data) || (data.streamQuality is string && data.streamQuality.size() <= 32)) &&
+             (!('fps' in data) || (data.fps is number)) &&
+             (!('bitrateKbps' in data) || (data.bitrateKbps is number)) &&
+             (!('createdBy' in data) || (data.createdBy is string && data.createdBy.size() <= 128)) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    // Audit Log validation
+    function isValidAuditLog(data) {
+      return data.assetId is string && data.assetId.size() > 0 && data.assetId.size() <= 128 &&
+             data.action is string && data.action.size() > 0 && data.action.size() <= 64 &&
+             data.details is string && data.details.size() > 0 && data.details.size() <= 500 &&
+             data.timestamp is string && data.timestamp.size() > 0 && data.timestamp.size() <= 64 &&
+             (!('assetTag' in data) || (data.assetTag is string && data.assetTag.size() <= 64)) &&
+             (!('assetName' in data) || (data.assetName is string && data.assetName.size() <= 128)) &&
+             (!('performedBy' in data) || (data.performedBy is string && data.performedBy.size() <= 100)) &&
+             (!('performedByEmail' in data) || (data.performedByEmail is string && data.performedByEmail.size() <= 128));
+    }
+
+    // Maintenance record validation
+    function isValidMaintenance(data) {
+      return data.assetId is string && data.assetId.size() > 0 && data.assetId.size() <= 128 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 128 &&
+             data.type in ['Routine Inspection', 'Repair', 'Calibration', 'Replacement'] &&
+             data.cost is number && data.cost >= 0 &&
+             data.status in ['Scheduled', 'In Progress', 'Completed'] &&
+             data.scheduledDate is string && data.scheduledDate.size() > 0 && data.scheduledDate.size() <= 32 &&
+             (!('technician' in data) || (data.technician is string && data.technician.size() <= 100)) &&
+             (!('completedDate' in data) || (data.completedDate is string && data.completedDate.size() <= 32)) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000)) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64));
+    }
+
+    // ASSETS COLLECTION
+    match /assets/{assetId} {
+      allow read: if isSignedIn();
+
+      allow create: if isVerifiedUser() && isValidId(assetId) && isValidAsset(incoming()) && (
+        incoming().createdBy == request.auth.uid || isAdmin()
+      );
+
+      allow update: if isVerifiedUser() && isValidId(assetId) && isValidAsset(incoming()) && (
+        isAdmin() ||
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'category', 'status', 'condition', 'location', 'floorOrArea', 'latitude', 'longitude',
+          'department', 'assignedTo', 'serialNumber', 'previousSerialNumber', 'notes', 'operationalHours',
+          'temperature', 'batteryLevel', 'isOnline', 'lastPing', 'lastAuditDate', 'nextMaintenanceDate',
+          'starlinkCid', 'starlinkKit', 'previousStarlinkKit', 'replacementReason', 'lastReplacedAt',
+          'replacementCount', 'starlinkServiceName', 'downloadSpeed', 'uploadSpeed',
+          'latency', 'obstructionPercent', 'cctvType', 'ipAddress', 'cctvUsername',
+          'cctvPassword', 'rtspPort', 'streamQuality', 'fps', 'bitrateKbps', 'updatedAt'
+        ])
+      );
+
+      allow delete: if isAdmin() && isValidId(assetId);
+    }
+
+    // AUDIT LOGS COLLECTION (Immutable stream)
+    match /audit_logs/{logId} {
+      allow read: if isSignedIn();
+      allow create: if isVerifiedUser() && isValidId(logId) && isValidAuditLog(incoming());
+      allow update: if false;
+      allow delete: if isAdmin() && isValidId(logId);
+    }
+
+    // MAINTENANCE COLLECTION
+    match /maintenance/{recordId} {
+      allow read: if isSignedIn();
+      allow create: if isVerifiedUser() && isValidId(recordId) && isValidMaintenance(incoming());
+      allow update: if isVerifiedUser() && isValidId(recordId) && isValidMaintenance(incoming()) && (
+        isAdmin() ||
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'title', 'type', 'cost', 'technician', 'status', 'scheduledDate', 'completedDate', 'notes'
+        ])
+      );
+      allow delete: if isAdmin() && isValidId(recordId);
+    }
+  }
+}

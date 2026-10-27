@@ -1,0 +1,6 @@
+{
+  "name": "AssetPulse",
+  "description": "Sistem inventaris site dan monitoring Starlink & CCTV real-time dengan peta koordinat GPS, manajemen 8 site tambang Berau, dan pelacakan replace unit.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

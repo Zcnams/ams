@@ -1,0 +1,114 @@
+{
+  "entities": {
+    "Asset": {
+      "title": "Asset",
+      "description": "Office inventory tracking Starlink satellite terminals and CCTV cameras with GPS coordinates and device replacement history",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "assetTag": { "type": "string", "maxLength": 64 },
+        "name": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "maxLength": 64 },
+        "status": {
+          "type": "string",
+          "enum": ["Active", "In Use", "Under Maintenance", "In Storage", "Decommissioned"]
+        },
+        "condition": {
+          "type": "string",
+          "enum": ["Excellent", "Good", "Fair", "Critical"]
+        },
+        "location": { "type": "string", "maxLength": 128 },
+        "floorOrArea": { "type": "string", "maxLength": 64 },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "department": { "type": "string", "maxLength": 64 },
+        "assignedTo": { "type": "string", "maxLength": 100 },
+        "serialNumber": { "type": "string", "maxLength": 64 },
+        "previousSerialNumber": { "type": "string", "maxLength": 64 },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "lastAuditDate": { "type": "string", "maxLength": 32 },
+        "nextMaintenanceDate": { "type": "string", "maxLength": 32 },
+        "operationalHours": { "type": "number" },
+        "temperature": { "type": "number" },
+        "batteryLevel": { "type": "number" },
+        "isOnline": { "type": "boolean" },
+        "lastPing": { "type": "string", "maxLength": 64 },
+        "starlinkCid": { "type": "string", "maxLength": 64 },
+        "starlinkKit": { "type": "string", "maxLength": 64 },
+        "previousStarlinkKit": { "type": "string", "maxLength": 64 },
+        "replacementReason": { "type": "string", "maxLength": 500 },
+        "lastReplacedAt": { "type": "string", "maxLength": 64 },
+        "replacementCount": { "type": "number" },
+        "starlinkServiceName": { "type": "string", "maxLength": 100 },
+        "downloadSpeed": { "type": "number" },
+        "uploadSpeed": { "type": "number" },
+        "latency": { "type": "number" },
+        "obstructionPercent": { "type": "number" },
+        "cctvType": { "type": "string", "maxLength": 64 },
+        "ipAddress": { "type": "string", "maxLength": 64 },
+        "cctvUsername": { "type": "string", "maxLength": 64 },
+        "cctvPassword": { "type": "string", "maxLength": 100 },
+        "rtspPort": { "type": "number" },
+        "streamQuality": { "type": "string", "maxLength": 32 },
+        "fps": { "type": "number" },
+        "bitrateKbps": { "type": "number" },
+        "createdBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["assetTag", "name", "category", "status", "condition", "location", "createdAt"]
+    },
+    "AssetAuditLog": {
+      "title": "AssetAuditLog",
+      "description": "Historical audit log tracking changes and device replacements",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "assetId": { "type": "string", "maxLength": 128 },
+        "assetTag": { "type": "string", "maxLength": 64 },
+        "assetName": { "type": "string", "maxLength": 128 },
+        "action": { "type": "string", "maxLength": 64 },
+        "performedBy": { "type": "string", "maxLength": 100 },
+        "performedByEmail": { "type": "string", "maxLength": 128 },
+        "details": { "type": "string", "maxLength": 500 },
+        "timestamp": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["assetId", "action", "details", "timestamp"]
+    },
+    "MaintenanceRecord": {
+      "title": "MaintenanceRecord",
+      "description": "Maintenance schedule and service record for office equipment",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "assetId": { "type": "string", "maxLength": 128 },
+        "assetTag": { "type": "string", "maxLength": 64 },
+        "assetName": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "enum": ["Routine Inspection", "Repair", "Calibration", "Replacement"] },
+        "cost": { "type": "number" },
+        "technician": { "type": "string", "maxLength": 100 },
+        "status": { "type": "string", "enum": ["Scheduled", "In Progress", "Completed"] },
+        "scheduledDate": { "type": "string", "maxLength": 32 },
+        "completedDate": { "type": "string", "maxLength": 32 },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["assetId", "title", "type", "cost", "status", "scheduledDate"]
+    }
+  },
+  "firestore": {
+    "/assets/{assetId}": {
+      "schema": { "$ref": "#/entities/Asset" },
+      "description": "Collection of all Starlink and CCTV assets with GPS coordinates and replacement tracking"
+    },
+    "/audit_logs/{logId}": {
+      "schema": { "$ref": "#/entities/AssetAuditLog" },
+      "description": "Immutable stream of change logs and device replacement events"
+    },
+    "/maintenance/{recordId}": {
+      "schema": { "$ref": "#/entities/MaintenanceRecord" },
+      "description": "Maintenance work orders and scheduled services"
+    }
+  }
+}
